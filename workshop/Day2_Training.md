@@ -132,8 +132,20 @@ Before setting up the camera, let's make sure the motors work.
 |---------|----------|
 | Page doesn't load | Check WiFi credentials, check IP address |
 | No motor movement | Check L298N wiring, check power supply |
-| Wrong direction | Swap the motor wire pairs at L298N |
+| Wrong direction | See fix below |
 | Only one side works | Check wiring for that motor |
+
+**Fix: Motors spinning the wrong way?**
+
+Open `src/main.cpp` and find the `forward()` function (around line 590). Swap `HIGH` and `LOW` for the problem motor:
+
+```cpp
+// Example: If LEFT motor is backwards, swap these:
+digitalWrite(LEFT_FWD, HIGH);  // Change to LOW
+digitalWrite(LEFT_BWD, LOW);   // Change to HIGH
+```
+
+Then re-upload the code.
 
 **Once motors work, continue to the next step!**
 
