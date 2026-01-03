@@ -51,7 +51,7 @@ The more examples you give, the better it learns!
 
 ### Step 1.1: Download the Project Code
 
-1. Go to: **https://github.com/YOUR-USERNAME/RoverProject**
+1. Go to: **https://github.com/Mushimush/discover-programme-artemis-chariot**
 2. Click the green **Code** button
 3. Click **Download ZIP**
 4. Extract the ZIP file to your Desktop or Documents folder
