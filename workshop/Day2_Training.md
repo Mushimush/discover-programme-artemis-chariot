@@ -100,7 +100,44 @@ const char* WIFI_PASSWORD = "YourWiFiPassword";
 
 **Write down the IP address:** `http://___.___.___.___ `
 
-### Step 1.5: Upload to ESP32-CAM
+### Step 1.5: Test the Motors (No Camera Needed!)
+
+Before setting up the camera, let's make sure the motors work.
+
+1. Open a web browser on your computer or phone
+2. Go to the IP address you wrote down: `http://[YOUR-IP-ADDRESS]/`
+3. You should see the **Rover Control** panel:
+
+```
+┌─────────────────────────────────────────┐
+│            ROVER CONTROL                │
+│                                         │
+│              [FORWARD]                  │
+│                                         │
+│    [LEFT]  [PAUSE] [RESUME]  [RIGHT]    │
+│                                         │
+│              [BACKWARD]                 │
+│                                         │
+│    [SEARCH]  [LIFT UP]  [LIFT DOWN]     │
+└─────────────────────────────────────────┘
+```
+
+4. Click **FORWARD** - do the wheels spin forward?
+5. Click **BACKWARD** - do they spin backward?
+6. Click **LEFT** and **RIGHT** - does it turn?
+7. Try **LIFT UP** and **LIFT DOWN** for the servo
+
+**Troubleshooting Motors:**
+| Problem | Solution |
+|---------|----------|
+| Page doesn't load | Check WiFi credentials, check IP address |
+| No motor movement | Check L298N wiring, check power supply |
+| Wrong direction | Swap the motor wire pairs at L298N |
+| Only one side works | Check wiring for that motor |
+
+**Once motors work, continue to the next step!**
+
+### Step 1.6: Upload to ESP32-CAM
 
 1. **Close** the current folder: **File** → **Close Folder**
 2. Open the ESP32-CAM folder: **File** → **Open Folder...** → select `esp32cam`
@@ -120,24 +157,20 @@ const char* WIFI_PASSWORD = "YourWiFiPassword";
 
 ---
 
-## Part 2: Test the Connection
+## Part 2: Test the Camera Stream
 
-### Test ESP32 Dev Board Web Interface
+Now let's verify the ESP32-CAM is working.
 
 1. Open a web browser
-2. Go to `http://[ESP32-DEV-BOARD-IP]/`
-3. You should see a control panel with buttons
-4. Click **FORWARD** - do the motors spin?
-5. Click **STOP**
-
-### Test ESP32-CAM Stream
-
-1. In your browser, go to `http://[ESP32-CAM-IP]/stream`
-2. You should see a live video feed from the camera!
+2. Go to `http://[ESP32-CAM-IP]/stream`
+3. You should see a live video feed from the camera!
 
 **Troubleshooting:**
-- If no connection: Check WiFi credentials
-- If motors don't work: Check wiring from Day 1
+| Problem | Solution |
+|---------|----------|
+| Page doesn't load | Check WiFi credentials, verify IP address |
+| Black/white image | Check camera ribbon cable connection |
+| Blurry image | Rotate the lens to focus |
 
 ---
 
