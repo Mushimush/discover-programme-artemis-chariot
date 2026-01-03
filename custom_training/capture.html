@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Image Capture</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .settings {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .row:last-child {
+            margin-bottom: 0;
+        }
+        .field {
+            flex: 1;
+            min-width: 150px;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #0f3460;
+            color: #fff;
+            font-size: 1rem;
+        }
+        input[type="text"]::placeholder {
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.1s;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-connect {
+            background: #e94560;
+            color: white;
+        }
+        .btn-folder {
+            background: #f39c12;
+            color: #1a1a2e;
+        }
+        .btn-capture {
+            background: #4ecca3;
+            color: #1a1a2e;
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 15px 40px;
+        }
+        .btn-clear {
+            background: #666;
+            color: white;
+        }
+        .video-container {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        #stream {
+            width: 100%;
+            display: block;
+        }
+        .placeholder {
+            color: #666;
+            text-align: center;
+            padding: 100px 20px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .stats {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        .stat {
+            text-align: center;
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 5px;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #4ecca3;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+        .folder-info {
+            background: #0f3460;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .folder-info .icon {
+            font-size: 1.5rem;
+        }
+        .folder-info .path {
+            flex: 1;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #4ecca3;
+            word-break: break-all;
+        }
+        .folder-info.not-set {
+            background: #4a1c1c;
+        }
+        .folder-info.not-set .path {
+            color: #e94560;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .status.connected {
+            background: #1b4332;
+            color: #4ecca3;
+        }
+        .status.disconnected {
+            background: #4a1c1c;
+            color: #e94560;
+        }
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 0, 0, 0.7);
+        }
+        .crosshair::before {
+            width: 30px;
+            height: 2px;
+            left: -15px;
+            top: -1px;
+        }
+        .crosshair::after {
+            width: 2px;
+            height: 30px;
+            left: -1px;
+            top: -15px;
+        }
+        canvas {
+            display: none;
+        }
+        .help {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        .help h3 {
+            margin: 0 0 10px 0;
+            color: #eee;
+            font-size: 1rem;
+        }
+        .help ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .help li {
+            margin-bottom: 5px;
+        }
+        .help code {
+            background: #0f3460;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .flash {
+            animation: flash 0.2s ease-out;
+        }
+        @keyframes flash {
+            0% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+        .warning {
+            background: #4a3c1c;
+            border: 1px solid #f39c12;
+            color: #f39c12;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Training Image Capture</h1>
+        <p class="subtitle">Capture images from ESP32-CAM for Edge Impulse training</p>
+
+        <div class="settings">
+            <div class="row">
+                <div class="field">
+                    <label>ESP32-CAM Stream URL</label>
+                    <input type="text" id="streamUrl" placeholder="http://192.168.1.100/stream">
+                </div>
+                <button class="btn-connect" onclick="toggleStream()" id="connectBtn">Connect</button>
+            </div>
+            <div class="row">
+                <div class="field">
+                    <label>Class Name</label>
+                    <input type="text" id="className" placeholder="e.g. matcha, red_ball" value="matcha">
+                </div>
+                <button class="btn-folder" onclick="selectFolder()">Select Folder</button>
+            </div>
+        </div>
+
+        <div id="folderInfo" class="folder-info not-set">
+            <span class="icon">📁</span>
+            <span class="path">No folder selected - click "Select Folder" to save images</span>
+        </div>
+
+        <div id="browserWarning" class="warning" style="display: none;">
+            ⚠️ Your browser doesn't support direct folder saving. Please use Chrome or Edge.
+        </div>
+
+        <div id="statusBar" class="status disconnected">Not connected - check Serial Monitor for ESP32-CAM IP</div>
+
+        <div class="video-container">
+            <img id="stream" crossorigin="anonymous" style="display: none;">
+            <div id="placeholder" class="placeholder">
+                Enter ESP32-CAM URL and click Connect<br><br>
+                <small>Tip: Check Arduino Serial Monitor for the IP address</small>
+            </div>
+            <div class="crosshair" id="crosshair" style="display: none;"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-capture" onclick="captureImage()" id="captureBtn" disabled>
+                Capture (S)
+            </button>
+        </div>
+
+        <div class="stats">
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-value" id="classCount">0</div>
+                    <div class="stat-label">This Class</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalCount">0</div>
+                    <div class="stat-label">Total Saved</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="classesCount">0</div>
+                    <div class="stat-label">Classes</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="help">
+            <h3>How to use</h3>
+            <ul>
+                <li><strong>Find IP:</strong> Open Arduino Serial Monitor, reset ESP32-CAM, look for IP address</li>
+                <li><strong>Connect:</strong> Enter <code>http://[IP]/stream</code> and click Connect</li>
+                <li><strong>Select Folder:</strong> Choose where to save images (creates subfolders per class)</li>
+                <li><strong>Capture:</strong> Press <code>S</code> or click button - saves immediately to folder</li>
+                <li><strong>New Class:</strong> Change the class name, keep capturing</li>
+                <li><strong>Goal:</strong> 100-200 images per object, varied angles/lighting</li>
+            </ul>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // State
+        let isConnected = false;
+        let folderHandle = null;
+        let classCounts = {}; // { className: count }
+        let totalCount = 0;
+
+        // Elements
+        const streamImg = document.getElementById('stream');
+        const placeholder = document.getElementById('placeholder');
+        const crosshair = document.getElementById('crosshair');
+        const statusBar = document.getElementById('statusBar');
+        const captureBtn = document.getElementById('captureBtn');
+        const folderInfo = document.getElementById('folderInfo');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Check browser support
+        if (!('showDirectoryPicker' in window)) {
+            document.getElementById('browserWarning').style.display = 'block';
+        }
+
+        // Load saved URL
+        const savedUrl = localStorage.getItem('esp32cam_url');
+        if (savedUrl) {
+            document.getElementById('streamUrl').value = savedUrl;
+        }
+
+        // Load saved class name
+        const savedClass = localStorage.getItem('esp32cam_class');
+        if (savedClass) {
+            document.getElementById('className').value = savedClass;
+        }
+
+        function toggleStream() {
+            if (isConnected) {
+                disconnect();
+            } else {
+                connect();
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('streamUrl').value.trim();
+            if (!url) {
+                alert('Please enter a stream URL');
+                return;
+            }
+
+            // Save URL
+            localStorage.setItem('esp32cam_url', url);
+
+            // Show stream
+            streamImg.src = url;
+            streamImg.style.display = 'block';
+            placeholder.style.display = 'none';
+            crosshair.style.display = 'block';
+
+            streamImg.onload = () => {
+                isConnected = true;
+                updateStatus(true);
+                updateCaptureButton();
+            };
+
+            streamImg.onerror = () => {
+                disconnect();
+                alert('Failed to connect. Check the URL and make sure ESP32-CAM is running.');
+            };
+        }
+
+        function disconnect() {
+            streamImg.src = '';
+            streamImg.style.display = 'none';
+            placeholder.style.display = 'block';
+            crosshair.style.display = 'none';
+            isConnected = false;
+            updateStatus(false);
+            updateCaptureButton();
+        }
+
+        function updateStatus(connected) {
+            if (connected) {
+                statusBar.textContent = 'Connected';
+                statusBar.className = 'status connected';
+                document.getElementById('connectBtn').textContent = 'Disconnect';
+            } else {
+                statusBar.textContent = 'Not connected - check Serial Monitor for ESP32-CAM IP';
+                statusBar.className = 'status disconnected';
+                document.getElementById('connectBtn').textContent = 'Connect';
+            }
+        }
+
+        function updateCaptureButton() {
+            captureBtn.disabled = !isConnected || !folderHandle;
+        }
+
+        async function selectFolder() {
+            if (!('showDirectoryPicker' in window)) {
+                alert('Your browser does not support folder selection. Please use Chrome or Edge.');
+                return;
+            }
+
+            try {
+                folderHandle = await window.showDirectoryPicker({
+                    mode: 'readwrite'
+                });
+
+                folderInfo.className = 'folder-info';
+                folderInfo.querySelector('.path').textContent = folderHandle.name;
+                updateCaptureButton();
+
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Error selecting folder:', err);
+                    alert('Failed to select folder: ' + err.message);
+                }
+            }
+        }
+
+        async function captureImage() {
+            if (!isConnected || !folderHandle) return;
+
+            const className = document.getElementById('className').value.trim() || 'unnamed';
+            localStorage.setItem('esp32cam_class', className);
+
+            try {
+                // Draw current frame to canvas
+                canvas.width = streamImg.naturalWidth;
+                canvas.height = streamImg.naturalHeight;
+                ctx.drawImage(streamImg, 0, 0);
+
+                // Get image as blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+
+                // Get or create class subfolder
+                const classFolder = await folderHandle.getDirectoryHandle(className, { create: true });
+
+                // Generate filename
+                const count = (classCounts[className] || 0) + 1;
+                const timestamp = Date.now();
+                const filename = `${className}_${String(count).padStart(4, '0')}_${timestamp}.jpg`;
+
+                // Save file
+                const fileHandle = await classFolder.getFileHandle(filename, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+
+                // Update counts
+                classCounts[className] = count;
+                totalCount++;
+                updateStats();
+
+                // Visual feedback
+                streamImg.classList.add('flash');
+                setTimeout(() => streamImg.classList.remove('flash'), 200);
+
+                console.log(`Saved: ${className}/${filename}`);
+
+            } catch (err) {
+                console.error('Error saving image:', err);
+                alert('Failed to save image: ' + err.message);
+            }
+        }
+
+        function updateStats() {
+            const className = document.getElementById('className').value.trim() || 'unnamed';
+            const classCount = classCounts[className] || 0;
+
+            document.getElementById('classCount').textContent = classCount;
+            document.getElementById('totalCount').textContent = totalCount;
+            document.getElementById('classesCount').textContent = Object.keys(classCounts).length;
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+
+            if (e.key === 's' || e.key === 'S') {
+                e.preventDefault();
+                captureImage();
+            }
+        });
+
+        // Update stats when class name changes
+        document.getElementById('className').addEventListener('input', updateStats);
+    </script>
+</body>
+</html>

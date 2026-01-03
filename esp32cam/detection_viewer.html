@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32-CAM Object Detection Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .viewer {
+            position: relative;
+            display: inline-block;
+            margin: 20px auto;
+            display: block;
+        }
+        #streamImage {
+            display: block;
+            max-width: 640px;
+            width: 100%;
+            height: auto;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        .info {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 8px;
+            background: #3a3a3a;
+            border-radius: 4px;
+        }
+        .label {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .value {
+            color: #fff;
+        }
+        .command {
+            font-size: 24px;
+            text-align: center;
+            padding: 15px;
+            background: #4CAF50;
+            color: #000;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .no-detection {
+            background: #ff5722;
+        }
+        .config {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        input {
+            background: #3a3a3a;
+            color: #fff;
+            border: 1px solid #4CAF50;
+            padding: 8px;
+            border-radius: 4px;
+            width: 200px;
+        }
+        button {
+            background: #4CAF50;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ESP32-CAM Object Detection Viewer</h1>
+
+        <div class="config">
+            <label class="label">ESP32 IP Address: </label>
+            <input type="text" id="ipInput" placeholder="192.168.1.100" value="">
+            <button onclick="connect()">Connect</button>
+        </div>
+
+        <div class="viewer">
+            <img id="streamImage" src="" alt="Video Stream">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="info">
+            <div class="info-row">
+                <span class="label">Status:</span>
+                <span class="value" id="status">Not Connected</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Detection:</span>
+                <span class="value" id="detection">None</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Confidence:</span>
+                <span class="value" id="confidence">-</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Bounding Box:</span>
+                <span class="value" id="bbox">-</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Object Center:</span>
+                <span class="value" id="center">-</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Offset from Frame Center:</span>
+                <span class="value" id="offset">-</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Direction:</span>
+                <span class="value" id="direction">-</span>
+            </div>
+            <div id="commandBox" class="command no-detection">
+                COMMAND: <span id="command">STOP</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let espIP = '';
+        let updateInterval;
+        const img = document.getElementById('streamImage');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Frame dimensions (ESP32-CAM QVGA)
+        const FRAME_WIDTH = 320;
+        const FRAME_HEIGHT = 240;
+        const FRAME_CENTER_X = 160;
+        const FRAME_CENTER_Y = 120;
+
+        function connect() {
+            espIP = document.getElementById('ipInput').value.trim();
+            if (!espIP) {
+                alert('Please enter ESP32 IP address');
+                return;
+            }
+
+            // Set stream URL
+            img.src = `http://${espIP}/stream`;
+            document.getElementById('status').textContent = 'Connected';
+            document.getElementById('status').style.color = '#4CAF50';
+
+            // Start polling detection data
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(updateDetection, 500); // Poll every 500ms
+        }
+
+        // Update canvas size when image loads
+        img.onload = function() {
+            const displayWidth = img.width;
+            const displayHeight = img.height;
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
+
+            // Calculate scale factor
+            window.scaleX = displayWidth / FRAME_WIDTH;
+            window.scaleY = displayHeight / FRAME_HEIGHT;
+        };
+
+        async function updateDetection() {
+            if (!espIP) return;
+
+            try {
+                const response = await fetch(`http://${espIP}/detection`);
+                const data = await response.json();
+
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (data.detected) {
+                    // Update info panel
+                    document.getElementById('detection').textContent = data.label.toUpperCase();
+                    document.getElementById('detection').style.color = '#4CAF50';
+                    document.getElementById('confidence').textContent = `${(data.confidence * 100).toFixed(1)}%`;
+                    document.getElementById('bbox').textContent = `x=${data.bbox.x}, y=${data.bbox.y}, w=${data.bbox.w}, h=${data.bbox.h}`;
+                    document.getElementById('center').textContent = `(${data.center.x}, ${data.center.y})`;
+                    document.getElementById('offset').textContent = `X=${data.offset.x}px, Y=${data.offset.y}px`;
+                    document.getElementById('direction').textContent = data.direction;
+                    document.getElementById('command').textContent = data.command;
+                    document.getElementById('commandBox').className = 'command';
+
+                    // Draw bounding box (green)
+                    const x = data.bbox.x * window.scaleX;
+                    const y = data.bbox.y * window.scaleY;
+                    const w = data.bbox.w * window.scaleX;
+                    const h = data.bbox.h * window.scaleY;
+
+                    ctx.strokeStyle = '#4CAF50';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x, y, w, h);
+
+                    // Draw label
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.fillText(`${data.label} ${(data.confidence * 100).toFixed(0)}%`, x, y - 5);
+
+                    // Draw object center (blue dot)
+                    const centerX = data.center.x * window.scaleX;
+                    const centerY = data.center.y * window.scaleY;
+                    ctx.fillStyle = '#2196F3';
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                } else {
+                    // No detection
+                    document.getElementById('detection').textContent = 'None';
+                    document.getElementById('detection').style.color = '#ff5722';
+                    document.getElementById('confidence').textContent = '-';
+                    document.getElementById('bbox').textContent = '-';
+                    document.getElementById('center').textContent = '-';
+                    document.getElementById('offset').textContent = '-';
+                    document.getElementById('direction').textContent = '-';
+                    document.getElementById('command').textContent = data.command || 'STOP';
+                    document.getElementById('commandBox').className = 'command no-detection';
+                }
+
+                // Always draw crosshair at frame center (red)
+                const centerX = FRAME_CENTER_X * window.scaleX;
+                const centerY = FRAME_CENTER_Y * window.scaleY;
+                const crosshairSize = 20;
+
+                ctx.strokeStyle = '#f44336';
+                ctx.lineWidth = 2;
+
+                // Horizontal line
+                ctx.beginPath();
+                ctx.moveTo(centerX - crosshairSize, centerY);
+                ctx.lineTo(centerX + crosshairSize, centerY);
+                ctx.stroke();
+
+                // Vertical line
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY - crosshairSize);
+                ctx.lineTo(centerX, centerY + crosshairSize);
+                ctx.stroke();
+
+                // Center circle
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 3, 0, 2 * Math.PI);
+                ctx.fillStyle = '#f44336';
+                ctx.fill();
+
+            } catch (error) {
+                console.error('Error fetching detection data:', error);
+                document.getElementById('status').textContent = 'Connection Error';
+                document.getElementById('status').style.color = '#ff5722';
+            }
+        }
+
+        // Auto-detect IP from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoIP = urlParams.get('ip');
+        if (autoIP) {
+            document.getElementById('ipInput').value = autoIP;
+            connect();
+        }
+    </script>
+</body>
+</html>
