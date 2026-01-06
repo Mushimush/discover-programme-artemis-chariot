@@ -30,47 +30,45 @@
 // ============================================================================
 
 // ----- WiFi Credentials -----
-// const char* WIFI_SSID = "eee-iot";
-// const char* WIFI_PASSWORD = "I0t@mar2026!";
+const char* WIFI_SSID = "Munchipuff";
+const char* WIFI_PASSWORD = "stanleY1";
 
-const char* WIFI_SSID = "Munchi Family";
-const char* WIFI_PASSWORD = "munchifatS1";
+// const char* WIFI_SSID = "Munchi Family";
+// const char* WIFI_PASSWORD = "munchifatS1";
 
 // ----- Serial Communication -----
-#define RXD2 16  // ESP32-CAM TX -> This pin
-#define TXD2 17  // Unused
+#define RXD2 16
+#define TXD2 17
 
 // ----- L298N Motor Pins -----
 // IN1+IN2 (GPIO13+14) → OUT1/OUT2 → Left motors
 // IN3+IN4 (GPIO33+32) → OUT3/OUT4 → Right motors
-// NOTE: GPIO26 and GPIO27 are broken (stuck HIGH) on this board
-#define LEFT_FWD   13  // IN1 - confirmed
-#define LEFT_BWD   14  // IN2
-#define RIGHT_FWD  33  // IN3 - confirmed
-#define RIGHT_BWD  32  // IN4 - was GPIO27, now GPIO32
+#define LEFT_FWD   33  // IN3
+#define LEFT_BWD   32  // IN4
+#define RIGHT_FWD  13  // IN1
+#define RIGHT_BWD  14  // IN2
 
 // ----- Servo Pins -----
-#define LIFT_SERVO_PIN 25  // Lift arm servo (pan servo removed - GPIO13 now used for motor)
+#define LIFT_SERVO_PIN 25
 
 // ----- Servo Positions -----
-#define SERVO_CENTER 70   // Calibrated center
+#define SERVO_CENTER 70
 #define SERVO_LEFT   130
 #define SERVO_RIGHT  10
-// NOTE: If lift servo moves opposite direction, swap LIFT_DOWN and LIFT_UP values
 #define LIFT_DOWN    90
 #define LIFT_UP      0
 #define LIFT_MID     45
 
 // ----- ToF Distance Thresholds (cm) -----
-#define OBSTACLE_DISTANCE_CM 20  // Wall detection
-#define TARGET_DISTANCE_CM   10  // Goal reached
+#define OBSTACLE_DISTANCE_CM 20
+#define TARGET_DISTANCE_CM   10
 
-// ----- Timing Constants -----
-#define COMMAND_TIMEOUT      2000  // Stop if no command (ms)
-#define TOF_LOG_INTERVAL     2000  // ToF logging interval (ms)
-#define PULSE_DURATION       100   // Turn pulse (ms) - smaller = smoother search
-#define STEER_PULSE_DURATION 75    // Steer pulse (ms) - was 150, reduced for LiPo
-#define SLOW_PULSE_DURATION  125   // Slow forward pulse (ms) - was 250, reduced for LiPo
+// ----- Timing Constants (ms) -----
+#define COMMAND_TIMEOUT      2000
+#define TOF_LOG_INTERVAL     2000
+#define PULSE_DURATION       100
+#define STEER_PULSE_DURATION 75
+#define SLOW_PULSE_DURATION  125
 
 // ----- Logging -----
 #define LOG_SIZE 10
@@ -79,26 +77,22 @@ const char* WIFI_PASSWORD = "munchifatS1";
 // SECTION 2: GLOBAL VARIABLES
 // ============================================================================
 
-// ----- Hardware Objects -----
 WebServer server(80);
 Servo liftServoMotor;
 VL53L0X tofSensor;
 
-// ----- State Variables -----
 bool tofAvailable = false;
 bool isTrackingTarget = false;
 bool isSearching = false;
-bool isPaused = false;  // When true, ignore ESP32-CAM commands
+bool isPaused = false;
 int searchDirection = 1;
 int currentServoAngle = SERVO_CENTER;
 String currentStatus = "STOPPED";
 String esp32CamIP = "";
 
-// ----- Timing -----
 unsigned long lastCommandTime = 0;
 unsigned long lastTofLog = 0;
 
-// ----- Command Logging -----
 String commandLog[LOG_SIZE];
 int logIndex = 0;
 String tofLog[LOG_SIZE];
@@ -178,7 +172,7 @@ void setup() {
     setupWebServer();
 
     Serial.println("\nWiring:");
-    Serial.println("  L298N: IN1=13, IN2=14, IN3=26, IN4=27");
+    Serial.println("  L298N: IN1=13, IN2=14, IN3=33, IN4=32");
     Serial.println("  Servo: Lift=25");
     Serial.println("  Serial: RX=16 (from ESP32-CAM)");
     Serial.println("  ToF: SDA=21, SCL=22\n");
@@ -264,11 +258,11 @@ void loop() {
         }
     }
 
-    // Safety timeout
-    if (millis() - lastCommandTime > COMMAND_TIMEOUT) {
-        stopMotors();
-        isSearching = false;
-    }
+    // Safety timeout - DISABLED (motors run until explicit STOP)
+    // if (millis() - lastCommandTime > COMMAND_TIMEOUT) {
+    //     stopMotors();
+    //     isSearching = false;
+    // }
 
     // ToF logging
     if (millis() - lastTofLog > TOF_LOG_INTERVAL) {
@@ -299,8 +293,8 @@ void handleRoot() {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { font-family: Arial; text-align: center; margin: 20px; background: #1a1a2e; color: white; }
-        h1 { color: #00d4ff; }
-        .btn { padding: 20px 40px; margin: 10px; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; min-width: 120px; }
+        h1 { color: #00d4ff; margin-bottom: 10px; }
+        .btn { padding: 15px 30px; margin: 5px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; min-width: 100px; }
         .btn-move { background: #4CAF50; color: white; }
         .btn-turn { background: #2196F3; color: white; }
         .btn-stop { background: #f44336; color: white; }
@@ -308,52 +302,88 @@ void handleRoot() {
         .btn-other { background: #ff9800; color: white; }
         .btn-lift { background: #00bcd4; color: white; }
         .btn-reset { background: #9c27b0; color: white; }
+        .btn-stream { background: #e91e63; color: white; }
         .btn:active { transform: scale(0.95); }
         .row { margin: 5px; }
-        #status { padding: 15px; margin: 20px; background: #16213e; border-radius: 5px; font-size: 20px; }
-        #status.goal { background: #1b5e20; color: #4caf50; font-size: 28px; font-weight: bold; }
-        input[type=range] { width: 200px; }
-        #log { background:#0d1117; padding:10px; border-radius:5px; font-family:monospace; font-size:12px; text-align:left; max-width:300px; margin:10px auto; height:80px; overflow-y:auto; }
+        #status { padding: 12px; margin: 10px auto; background: #16213e; border-radius: 5px; font-size: 18px; max-width: 400px; }
+        .video-container { margin: 15px auto; max-width: 340px; }
+        .video-container img { width: 320px; height: 240px; background: #000; border: 2px solid #333; border-radius: 5px; }
+        .cam-controls { margin: 10px 0; }
+        .cam-controls input { padding: 8px; width: 150px; border-radius: 5px; border: none; margin-right: 5px; }
+        #log { background:#0d1117; padding:10px; border-radius:5px; font-family:monospace; font-size:11px; text-align:left; max-width:400px; margin:15px auto; height:120px; overflow-y:auto; }
+        #log .tof { color: #00bcd4; }
+        #log .cam { color: #8bc34a; }
+        .section-label { color: #888; font-size: 12px; margin-top: 15px; }
     </style>
 </head>
 <body>
     <h1>Rover Control</h1>
     <div id="status">Loading...</div>
-    <div class="row"><button class="btn btn-move" onclick="send('FORWARD')">FORWARD</button></div>
+
+    <div class="video-container">
+        <img id="camFeed" src="" alt="Camera Feed - Enter IP and Connect">
+    </div>
+    <div class="cam-controls">
+        <input type="text" id="camIP" placeholder="CAM IP (e.g. 192.168.1.100)">
+        <button class="btn btn-stream" onclick="connectStream()">Connect</button>
+        <button class="btn btn-reset" onclick="resetGoal()">Reset Goal</button>
+    </div>
+
+    <div class="section-label">Movement</div>
+    <div class="row"><button class="btn btn-move" onclick="send('FORWARD')">FWD</button></div>
     <div class="row">
         <button class="btn btn-turn" onclick="send('TURN_LEFT')">LEFT</button>
         <button class="btn btn-stop" onclick="send('STOP')">PAUSE</button>
         <button class="btn btn-resume" onclick="resume()">RESUME</button>
         <button class="btn btn-turn" onclick="send('TURN_RIGHT')">RIGHT</button>
     </div>
-    <div class="row"><button class="btn btn-move" onclick="send('BACKWARD')">BACKWARD</button></div>
+    <div class="row"><button class="btn btn-move" onclick="send('BACKWARD')">BWD</button></div>
     <div class="row">
         <button class="btn btn-other" onclick="send('SEARCH')">SEARCH</button>
         <button class="btn btn-lift" onclick="send('LIFT_UP')">LIFT UP</button>
         <button class="btn btn-lift" onclick="send('LIFT_DOWN')">LIFT DOWN</button>
     </div>
-    <div class="row" style="margin-top:15px;">
-        <input type="text" id="camIP" placeholder="CAM IP (e.g. 192.168.1.100)" style="padding:10px;width:180px;border-radius:5px;border:none;">
-        <button class="btn btn-reset" onclick="resetGoal()">RESET GOAL</button>
-    </div>
+
+    <div class="section-label">Sensor Log</div>
     <div id="log"></div>
+
     <script>
         function send(a){fetch('/cmd?action='+a).then(r=>r.text()).then(t=>document.getElementById('status').innerText=t);}
+
+        function connectStream(){
+            var ip=document.getElementById('camIP').value.trim();
+            if(!ip){alert('Enter CAM IP first');return;}
+            localStorage.setItem('camIP',ip);
+            document.getElementById('camFeed').src='http://'+ip+'/stream';
+        }
+
         function resetGoal(){
             var ip=document.getElementById('camIP').value.trim();
             if(!ip){alert('Enter CAM IP first');return;}
             localStorage.setItem('camIP',ip);
             fetch('http://'+ip+'/reset',{mode:'no-cors'});
         }
+
         function resume(){
             send('RESUME');
             var ip=localStorage.getItem('camIP');
             if(ip){fetch('http://'+ip+'/reset',{mode:'no-cors'});}
         }
+
         document.getElementById('camIP').value=localStorage.getItem('camIP')||'';
+
         setInterval(()=>{
             fetch('/status').then(r=>r.text()).then(t=>document.getElementById('status').innerText=t);
-            fetch('/log').then(r=>r.text()).then(t=>document.getElementById('log').innerHTML=t.split('\n').map(l=>l?'<div>'+l+'</div>':'').join(''));
+            Promise.all([fetch('/log'),fetch('/tof')]).then(([logRes,tofRes])=>Promise.all([logRes.text(),tofRes.text()])).then(([logData,tofData])=>{
+                var html='';
+                var logs=logData.split('\n').filter(l=>l).map(l=>'<div class="cam">'+l+'</div>');
+                var tofs=tofData.split('\n').filter(l=>l).map(l=>'<div class="tof">ToF: '+l+'</div>');
+                for(var i=0;i<Math.max(logs.length,tofs.length);i++){
+                    if(tofs[i])html+=tofs[i];
+                    if(logs[i])html+=logs[i];
+                }
+                document.getElementById('log').innerHTML=html;
+            });
         },500);
     </script>
 </body>
@@ -541,7 +571,7 @@ void processCommand(String cmd) {
     else if (cmd == "TEST") {
         Serial.println("\n=== MOTOR TEST ===");
 
-        Serial.println("1. LEFT FORWARD (GPIO26)...");
+        Serial.println("1. LEFT FORWARD (GPIO13)...");
         digitalWrite(LEFT_FWD, HIGH);
         digitalWrite(LEFT_BWD, LOW);
         digitalWrite(RIGHT_FWD, LOW);
@@ -550,7 +580,7 @@ void processCommand(String cmd) {
         stopMotors();
         delay(500);
 
-        Serial.println("2. LEFT BACKWARD (GPIO27)...");
+        Serial.println("2. LEFT BACKWARD (GPIO14)...");
         digitalWrite(LEFT_FWD, LOW);
         digitalWrite(LEFT_BWD, HIGH);
         digitalWrite(RIGHT_FWD, LOW);
@@ -559,7 +589,7 @@ void processCommand(String cmd) {
         stopMotors();
         delay(500);
 
-        Serial.println("3. RIGHT FORWARD (GPIO13)...");
+        Serial.println("3. RIGHT FORWARD (GPIO33)...");
         digitalWrite(LEFT_FWD, LOW);
         digitalWrite(LEFT_BWD, LOW);
         digitalWrite(RIGHT_FWD, HIGH);
@@ -568,7 +598,7 @@ void processCommand(String cmd) {
         stopMotors();
         delay(500);
 
-        Serial.println("4. RIGHT BACKWARD (GPIO14)...");
+        Serial.println("4. RIGHT BACKWARD (GPIO32)...");
         digitalWrite(LEFT_FWD, LOW);
         digitalWrite(LEFT_BWD, LOW);
         digitalWrite(RIGHT_FWD, LOW);

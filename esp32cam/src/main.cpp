@@ -25,11 +25,11 @@
 
 /* WiFi Configuration ------------------------------------------------------ */
 // >>> CHANGE THESE TO YOUR WIFI CREDENTIALS <<<
-const char* WIFI_SSID = "Munchi Family";
-const char* WIFI_PASSWORD = "munchifatS1";
+// const char* WIFI_SSID = "Munchi Family";
+// const char* WIFI_PASSWORD = "munchifatS1";
 
-// const char* WIFI_SSID = "eee-iot";
-// const char* WIFI_PASSWORD = "I0t@mar2026!";
+const char* WIFI_SSID = "eee-iot";
+const char* WIFI_PASSWORD = "I0t@mar2026!";
 
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
@@ -360,6 +360,7 @@ void loop()
 #if EI_CLASSIFIER_OBJECT_DETECTION == 1
     ei_printf("\nObject detection bounding boxes:\n");
     bool found_objects = false;
+    bool processed_detection = false;
     ObjectPosition best_object_pos;
     String navigation_command = "STOP";
 
@@ -413,8 +414,9 @@ void loop()
         ei_printf("    Turn Amount: %d%%\n", turn_percent);
         ei_printf("    Direction: %s\n", pos.direction.c_str());
 
-        // For first/best detection, generate navigation command
-        if (i == 0) {
+        // For first valid detection, generate navigation command
+        if (!processed_detection) {
+            processed_detection = true;
             best_object_pos = pos;
 
             // Calculate scaled bounding box dimensions for distance estimation
